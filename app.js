@@ -5,24 +5,13 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registration failed:', err));
 }
 
-// Request Notification Permission
-async function requestNotificationPermission() {
+async function requestProvisionalPermission() {
   if ('Notification' in window) {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log('Notifications enabled');
-    } else if (permission === 'denied') {
-      alert('Notifications are disabled. Please enable them in your device settings.');
-    }
-  } else {
-    alert('Your browser does not support notifications.');
+    const permission = await Notification.requestPermission({ provisional: true });
+    console.log('Provisional permission:', permission);
   }
 }
 
-// Call this function when the page loads or on user interaction
-document.addEventListener('DOMContentLoaded', () => {
-  requestNotificationPermission();
-});
 
 
 // Handle Reminder Setup
