@@ -6,15 +6,24 @@ if ('serviceWorker' in navigator) {
 }
 
 // Request Notification Permission
-function requestNotificationPermission() {
+async function requestNotificationPermission() {
   if ('Notification' in window) {
-    Notification.requestPermission().then(permission => {
-      if (permission !== 'granted') {
-        alert('Notifications are disabled. Please enable them to receive reminders.');
-      }
-    });
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      console.log('Notifications enabled');
+    } else if (permission === 'denied') {
+      alert('Notifications are disabled. Please enable them in your device settings.');
+    }
+  } else {
+    alert('Your browser does not support notifications.');
   }
 }
+
+// Call this function when the page loads or on user interaction
+document.addEventListener('DOMContentLoaded', () => {
+  requestNotificationPermission();
+});
+
 
 // Handle Reminder Setup
 document.getElementById('setReminder').addEventListener('click', () => {
