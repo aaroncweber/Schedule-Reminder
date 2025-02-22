@@ -5,12 +5,15 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registration failed:', err));
 }
 
-async function requestProvisionalPermission() {
-  if ('Notification' in window) {
-    const permission = await Notification.requestPermission({ provisional: true });
-    console.log('Provisional permission:', permission);
+document.getElementById('enableNotifications').addEventListener('click', async () => {
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    alert('Notifications enabled!');
+  } else {
+    alert('Notifications are disabled. Please enable them in your device settings.');
   }
-}
+});
+
 
 
 
