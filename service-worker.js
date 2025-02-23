@@ -4,7 +4,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then(windowClients => {
       for (const client of windowClients) {
-        if (client.url === '/' && 'focus' in client) {
+        if (client.url === '/' && 'focus' in client) { // Check if client is the PWA
           return client.focus();
         }
       }
@@ -14,7 +14,6 @@ self.addEventListener('notificationclick', event => {
     })
   );
 });
-
 
 self.addEventListener('message', event => {
   if (event.data.type === 'schedule-notification') {
