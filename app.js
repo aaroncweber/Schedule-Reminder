@@ -5,17 +5,20 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registration failed:', err));
 }
 
-document.getElementById('enableNotifications').addEventListener('click', async () => {
-  const permission = await Notification.requestPermission();
-  if (permission === 'granted') {
-    alert('Notifications enabled!');
-  } else {
-    alert('Notifications are disabled. Please enable them in your device settings.');
+// Request Notification Permission
+function requestNotificationPermission() {
+  if ('Notification' in window) {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        document.getElementById('permissionStatus').textContent = 'Notifications are enabled!';
+      } else if (permission === 'denied') {
+        document.getElementById('permissionStatus').textContent = 'Notifications are blocked. Please enable them in your browser settings to receive reminders.';
+      } else {
+        document.getElementById('permissionStatus').textContent = 'Notification permission is pending.'; // 'default' state
+      }
+    });
   }
-});
-
-
-
+}
 
 // Handle Reminder Setup
 document.getElementById('setReminder').addEventListener('click', () => {
@@ -27,38 +30,32 @@ document.getElementById('setReminder').addEventListener('click', () => {
     return;
   }
 
-  // Calculate the time difference for the notification
   const now = new Date();
   const [hours, minutes] = timeInput.split(':');
   const notificationTime = new Date();
   notificationTime.setHours(hours, minutes, 0, 0);
-
   const timeDifference = notificationTime - now;
-  
+
   if (timeDifference <= 0) {
     alert('Please select a future time.');
     return;
   }
 
-  // Schedule the Notification
-  setTimeout(() => {
-    sendNotification(tasksInput);
-  }, timeDifference);
-
-  document.getElementById('status').textContent = `Reminder set for ${timeInput}.`;
-});
-
-// Send Notification
-function sendNotification(tasks) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    navigator.serviceWorker.ready.then(registration => {
-      registration.showNotification('Daily Schedule Reminder', {
-        body: `Tasks:\n${tasks}`,
-        icon: 'icon.png',
+  // Send a message to the service worker to schedule the notification
+  navigator.serviceWorker.ready.then(registration => {
+    if (registration.active) { // Make sure service worker is active
+      registration.active.postMessage({
+        type: 'schedule-notification',
+        time: notificationTime.getTime(), // Send timestamp
+        tasks: tasksInput
       });
-    });
-  }
-}
+      document.getElementById('status').textContent = `Reminder set for ${timeInput}.`;
+    } else {
+      console.error('Service worker is not active.');
+      document.getElementById('status').textContent = 'Error: Service worker is not active.  Try refreshing.';
+    }
+  });
+});
 
 // Request notification permission on page load
 requestNotificationPermission();
