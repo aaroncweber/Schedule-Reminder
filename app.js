@@ -1,26 +1,29 @@
-// Register the Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js')
     .then(() => console.log('Service Worker registered'))
     .catch(err => console.error('Service Worker registration failed:', err));
 }
 
-// Request Notification Permission
+// Function to update the permission status message
+function updatePermissionStatus(permission) {
+    if (permission === 'granted') {
+        document.getElementById('permissionStatus').textContent = 'Notifications are enabled!';
+    } else if (permission === 'denied') {
+        document.getElementById('permissionStatus').textContent = 'Notifications are blocked. Please enable them in your browser settings to receive reminders.';
+    } else {
+        document.getElementById('permissionStatus').textContent = 'Notification permission is pending.'; // 'default' state
+    }
+}
+
+// Request Notification Permission AND update status
 function requestNotificationPermission() {
   if ('Notification' in window) {
     Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        document.getElementById('permissionStatus').textContent = 'Notifications are enabled!';
-      } else if (permission === 'denied') {
-        document.getElementById('permissionStatus').textContent = 'Notifications are blocked. Please enable them in your browser settings to receive reminders.';
-      } else {
-        document.getElementById('permissionStatus').textContent = 'Notification permission is pending.'; // 'default' state
-      }
+      updatePermissionStatus(permission); // Update status *after* the promise resolves
     });
   }
 }
 
-// Handle Reminder Setup
 document.getElementById('setReminder').addEventListener('click', () => {
   const timeInput = document.getElementById('time').value;
   const tasksInput = document.getElementById('tasks').value;
@@ -41,21 +44,42 @@ document.getElementById('setReminder').addEventListener('click', () => {
     return;
   }
 
-  // Send a message to the service worker to schedule the notification
-  navigator.serviceWorker.ready.then(registration => {
-    if (registration.active) { // Make sure service worker is active
-      registration.active.postMessage({
+  // Check notification permission *before* sending the message to the service worker
+  if (Notification.permission === 'granted') {
+    navigator.serviceWorker.ready.then(registration => {
+      // More robust service worker ready check (using oncontrollerchange)
+      if (registration.active) {
+        sendMessageToServiceWorker(registration, notificationTime, tasksInput);
+      } else {
+          // Wait for the service worker to become active.
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (navigator.serviceWorker.controller){
+                sendMessageToServiceWorker(navigator.serviceWorker, notificationTime, tasksInput);
+            }
+          });
+      }
+    });
+  } else if (Notification.permission === 'denied') {
+      alert('Notifications are blocked.  Please enable them in your browser settings.'); // User-friendly alert
+      updatePermissionStatus(Notification.permission);
+  } else {
+    // If permission is 'default', request it again
+    requestNotificationPermission();
+  }
+});
+
+function sendMessageToServiceWorker(registration, notificationTime, tasksInput){
+    registration.active.postMessage({
         type: 'schedule-notification',
         time: notificationTime.getTime(), // Send timestamp
         tasks: tasksInput
-      });
-      document.getElementById('status').textContent = `Reminder set for ${timeInput}.`;
-    } else {
-      console.error('Service worker is not active.');
-      document.getElementById('status').textContent = 'Error: Service worker is not active.  Try refreshing.';
-    }
-  });
-});
+    });
+    document.getElementById('status').textContent = `Reminder set for ${document.getElementById('time').value}.`;
+}
 
-// Request notification permission on page load
+
+// Request notification permission on page load AND check current state
 requestNotificationPermission();
+if ('Notification' in window) {
+    updatePermissionStatus(Notification.permission); // Set initial status
+}
